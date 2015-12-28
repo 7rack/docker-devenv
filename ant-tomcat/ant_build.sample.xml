@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project name="projname3.0" basedir="." default="deploy">
+
+  <!-- all properties -->
+  <property name="lib.dir" value="/opt/ant/bin" />
+  <property name="svn.dir" value="/home/devops/workspace/websource" />
+  <property name="tomcat.dir" value="/opt/tomcat" />
+  <property name="tomcat.lib.dir" value="${tomcat.dir}/lib" />
+  <property name="tomcat.webapp.dir" value="${tomcat.dir}/webapps/projname" />
+  <property name="tomcat.webapp.classes.dir" value="${tomcat.dir}/webapps/projname/WEB-INF/classes" />
+  <property name="java.lib.dir" value="/opt/java/lib" />
+  <property name="jre.lib.dir" value="/opt/java/jre/lib" />
+  <property name="src.dir" value="${svn.dir}/src" />
+  <property name="sql.dir" value="${src.dir}/sqlconfig" />
+  <property name="webcontent.dir" value="${svn.dir}/WebContent" />
+  <property name="webinf.dir" value="${webcontent.dir}/WEB-INF" />
+  <property name="classes.dir" value="${webinf.dir}/classes" />
+  <property name="project.lib.dir" value="${webinf.dir}/lib" />
+  <property name="config.dir" value="/home/devops/config/projname" />
+  <property name="svn.url" value="https://10.0.0.4/svn/projectname/3.0" />
+  <property name="svn.user" value="username" />
+  <property name="svn.password" value="password" />
+
+  <!-- check java version -->
+  <target name="checkEnvironment" if="ant.java.version">
+                <echo message="Java Version: ${ant.java.version}"/>
+  </target>
+
+  <!-- path to the svnant libraries. Usually they will be located in ANT_HOME/lib -->
+  <path id="svnant.classpath">
+    <fileset dir="${lib.dir}">
+      <include name="**/*.jar"/>
+    </fileset>
+  </path>
+
+  <!-- load the svn task -->
+  <typedef resource="org/tigris/subversion/svnant/svnantlib.xml" classpathref="svnant.classpath" />
+  <svnSetting javahl="false" svnkit="true" username="${svn.user}"
+             password="${svn.password}" id="svn.settings"/>
+
+  <!-- delete all source files -->
+  <target name="deleteSource" depends="checkEnvironment">
+    <echo message="deleting source files ..."/>
+        <delete includeemptydirs="true">
+                <fileset dir="${svn.dir}" includes="**/*" defaultexcludes="false"/>
+        </delete>
+        <echo message="deleted successfully"/>
+  </target>
+
+  <!-- check out source files-->
+   <target name="checkout" depends="deleteSource">
+    <echo message="checking out ..."/>
+    <svn refid="svn.settings">
+      <checkout url="${svn.url}" revision="HEAD" destPath="${svn.dir}" />
+    </svn>
+        <echo message="checked successfully"/>
+  </target>
+
+  <!-- delete .svn folders ans properties -->
+  <target name="deleteFiles" depends="checkout">
+        <echo message="delete useless files ..."/>
+        <delete includeemptydirs="true">
+                <fileset dir="${svn.dir}" includes="src/*.*" defaultexcludes="false"/>
+                <fileset dir="${svn.dir}" includes="**/.svn/" defaultexcludes="false"/>
+        </delete>
+        <echo message="deleted successfully"/>
+  </target>
+
+  <!-- copy dt.jar rt.jar to lib -->
+  <target name="copyJars" depends="deleteFiles">
+        <echo message="copying dt.jar and rt.jar ..."/>
+        <copy file="${java.lib.dir}/dt.jar" tofile="${project.lib.dir}/dt.jar" />
+        <copy file="${jre.lib.dir}/rt.jar" tofile="${project.lib.dir}/rt.jar" />
+        <echo message="copied successfully" />
+  </target>
+  <!-- compile java code -->
+  <target name="compile" depends="copyJars"><!-- depends="deleteFiles" -->
+        <echo message="compiling ... from ${src.dir} to ${classes.dir}"/>
+        <path id="webapp.classpath">
+           <fileset dir="${project.lib.dir}"> <!-- all jars in web-info -->
+                <include name="**/*.jar"/>
+           </fileset>
+        </path>
+        <path id="tomcat.classpath">
+           <fileset dir="${tomcat.lib.dir}"> <!-- all jars in tomcat -->
+                <include name="**/*.jar"/>
+           </fileset>
+        </path>
+        <mkdir dir="${classes.dir}"/>
+        <javac includeantruntime="false" srcdir="${src.dir}" fork="true" debug="false" destdir="${classes.dir}" encoding="UTF-8" >
+                <classpath id="classpath" >
+                        <path refid="webapp.classpath" />
+                        <path refid="tomcat.classpath" />
+                </classpath>
+        </javac>
+        <echo message="compiled successfully"/>
+  </target>
+
+  <!-- delete dt.jar and rt.jar in lib-->
+  <target name="deleteJars" depends="compile">
+        <echo message="deleting dt.jar and rt.jar ..."/>
+        <delete file="${project.lib.dir}/dt.jar" />
+        <delete file="${project.lib.dir}/rt.jar" />
+        <echo message="deleted successfully" />
+  </target>
+
+  <!-- copy sql xml -->
+  <target name="copySql" depends="deleteJars">
+        <echo message="copying sql xmls ..."/>
+          <mkdir dir="${classes.dir}/sqlconfig"/>
+        <copy todir="${classes.dir}/sqlconfig" overwrite="true" >
+                <fileset dir="${sql.dir}"  includes="*.*" />
+        </copy>
+        <echo message="copied successfully" />
+  </target>
+  <!-- add properties -->
+  <target name="addProperties" depends="copySql">
+        <echo message="copying properties ..."/>
+        <copy todir="${classes.dir}" overwrite="true" >
+                <fileset dir="${config.dir}"  includes="*.*" />
+        </copy>
+        <echo message="copied successfully" />
+  </target>
+
+  <!-- clear project -->
+  <target name="clearProject" depends="addProperties">
+    <echo message="deleting classes files ..."/>
+        <delete includeemptydirs="true">
+                <fileset dir="${tomcat.webapp.dir}" includes="**/*" defaultexcludes="false"/>
+        </delete>
+        <echo message="deleted successfully"/>
+  </target>
+
+
+  <!-- deploy -->
+  <target name="deploy" depends="clearProject">
+        <echo message="deploying ..."/>
+        <copy todir="${tomcat.webapp.dir}" overwrite="true">
+                <fileset dir="${webcontent.dir}" />
+        </copy>
+        <echo message="deployed successfully"/>
+  </target>
+
+</project>
