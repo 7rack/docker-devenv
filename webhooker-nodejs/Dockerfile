@@ -21,6 +21,7 @@ RUN echo 'root:password' | chpasswd
 # Prepare environment
 
 ENV TZ Asia/Shanghai
+# ENV LANG zh_CN.UTF-8
 
 # add personal repo SSH keys
 ADD devops.pem /home/devops/.ssh/id_rsa

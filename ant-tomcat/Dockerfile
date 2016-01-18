@@ -11,6 +11,8 @@ RUN yum -y update && \
 # Prepare environment
 
 ENV TZ Asia/Shanghai
+# 配置中文语言
+#ENV LANG zh_CN.UTF-8
 ENV JAVA_HOME /opt/java
 ENV CATALINA_HOME /opt/tomcat
 ENV ANT_HOME /opt/ant
